@@ -1,4 +1,4 @@
-import anthropic
+import google.generativeai as genai
 import database
 import config
 
@@ -28,13 +28,32 @@ def build_context(articles: list) -> str:
     return "\n\n".join(context_parts)
 
 
+SYSTEM_PROMPT = (
+    "あなたはTeam Energyグループの経営判断を支援する情報分析アシスタントです。\n"
+    "\n"
+    "Team Energyの主要事業領域:\n"
+    "1. 再生可能エネルギー（特に地熱発電）— ふるさと熱電株式会社\n"
+    "2. カーボンクレジット・脱炭素コンサル — Bywill株式会社\n"
+    "3. AI活用・DX推進\n"
+    "4. シニア向け事業（介護・高齢者住宅）\n"
+    "5. M&A・スタートアップ投資・グループ経営\n"
+    "\n"
+    "回答ルール:\n"
+    "- 蓄積された記事情報をもとに、正確かつ簡潔に回答する\n"
+    "- Team Energyの事業にとっての影響・示唆を含める\n"
+    "- 参考にした記事番号を明示する\n"
+    "- 日本語で回答する\n"
+    "- 経営者が意思決定に使える具体的な情報を優先する"
+)
+
+
 def analyze(query: str, use_rag: bool = True) -> dict:
-    """蓄積情報を活用してClaudeで分析・回答"""
-    if not config.ANTHROPIC_API_KEY:
+    """蓄積情報を活用してGeminiで分析・回答"""
+    if not config.GOOGLE_API_KEY:
         return {
-            "answer": "⚠️ ANTHROPIC_API_KEY が設定されていません。\n\n"
-                      "環境変数に設定してください:\n"
-                      "```\nexport ANTHROPIC_API_KEY=sk-ant-...\n```",
+            "answer": "⚠️ GOOGLE_API_KEY が設定されていません。\n\n"
+                      "Streamlit CloudのSettings → Secretsに以下を追加してください:\n"
+                      "```\nGOOGLE_API_KEY = \"AIzaSy...\"\n```",
             "sources": [],
         }
 
@@ -46,24 +65,6 @@ def analyze(query: str, use_rag: bool = True) -> dict:
         context = build_context(sources)
 
     # プロンプト構築
-    system_prompt = (
-        "あなたはTeam Energyグループの経営判断を支援する情報分析アシスタントです。\n"
-        "\n"
-        "Team Energyの主要事業領域:\n"
-        "1. 再生可能エネルギー（特に地熱発電）— ふるさと熱電株式会社\n"
-        "2. カーボンクレジット・脱炭素コンサル — Bywill株式会社\n"
-        "3. AI活用・DX推進\n"
-        "4. シニア向け事業（介護・高齢者住宅）\n"
-        "5. M&A・スタートアップ投資・グループ経営\n"
-        "\n"
-        "回答ルール:\n"
-        "- 蓄積された記事情報をもとに、正確かつ簡潔に回答する\n"
-        "- Team Energyの事業にとっての影響・示唆を含める\n"
-        "- 参考にした記事番号を明示する\n"
-        "- 日本語で回答する\n"
-        "- 経営者が意思決定に使える具体的な情報を優先する"
-    )
-
     if context:
         user_message = (
             f"以下は蓄積された関連情報です:\n\n{context}\n\n"
@@ -72,16 +73,14 @@ def analyze(query: str, use_rag: bool = True) -> dict:
     else:
         user_message = query
 
-    # Claude API呼び出し
-    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-    response = client.messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=2000,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
+    # Gemini API呼び出し
+    genai.configure(api_key=config.GOOGLE_API_KEY)
+    model = genai.GenerativeModel(
+        model_name=config.GEMINI_MODEL,
+        system_instruction=SYSTEM_PROMPT,
     )
-
-    answer = response.content[0].text
+    response = model.generate_content(user_message)
+    answer = response.text
 
     return {
         "answer": answer,

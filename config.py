@@ -6,12 +6,12 @@ try:
 except Exception:
     _secrets = {}
 
-# Claude API設定
-ANTHROPIC_API_KEY = (
-    _secrets.get("ANTHROPIC_API_KEY", "")
-    or os.environ.get("ANTHROPIC_API_KEY", "")
+# Gemini API設定
+GOOGLE_API_KEY = (
+    _secrets.get("GOOGLE_API_KEY", "")
+    or os.environ.get("GOOGLE_API_KEY", "")
 )
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 # データベース設定
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")

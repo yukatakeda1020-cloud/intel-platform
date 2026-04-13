@@ -217,5 +217,5 @@ with tab_collect:
         st.info("まだ記事がありません")
 
     st.divider()
-    api_ok = bool(analyzer.config.ANTHROPIC_API_KEY)
-    st.caption(f"API Key: {'✅ 設定済み' if api_ok else '❌ 未設定（分析タブに必要）'}")
+    api_ok = bool(analyzer.config.GOOGLE_API_KEY)
+    st.caption(f"Gemini API: {'✅ 設定済み' if api_ok else '❌ 未設定（分析タブに必要）'}")
