@@ -76,22 +76,47 @@ RSS_FEEDS = {
     # ─────────────────────────────────────────────
     # 4. シニア・介護・ヘルスケア
     # ─────────────────────────────────────────────
+    # 日本
     "介護ニュース Joint": "https://www.joint-kaigo.com/rss/",
     "高齢者住宅新聞": "https://www.koureisha-jutaku.com/feed/",
+    "ケアマネタイムス": "https://caremanager.jp/feed",
+    "みんなの介護": "https://www.minnanokaigo.com/feed/",
+    "シルバー産業新聞": "https://www.care-news.jp/feed",
+    "日経ヘルスケア": "https://medical.nikkeibp.co.jp/inc/all/healthnews/rss/index.rdf",
+    # 海外
     "Senior Housing News": "https://seniorhousingnews.com/feed/",
-    "Next Avenue (シニア)": "https://www.nextavenue.org/feed/",
     "McKnight's Senior Living": "https://www.mcknightsseniorliving.com/feed/",
+    "Next Avenue (シニア)": "https://www.nextavenue.org/feed/",
+    "Aging Care": "https://www.agingcare.com/feed",
+    "Home Health Care News": "https://homehealthcarenews.com/feed/",
+    "Skilled Nursing News": "https://skillednursingnews.com/feed/",
+    # ヘルステック
+    "MobiHealthNews": "https://www.mobihealthnews.com/feed",
+    "Healthcare IT News": "https://www.healthcareitnews.com/feed",
 
     # ─────────────────────────────────────────────
     # 5. M&A・スタートアップ・経営戦略
     # ─────────────────────────────────────────────
+    # 日本M&A
     "M&A Online": "https://maonline.jp/rss",
     "MARR Online (M&A)": "https://www.marr.jp/rss",
+    "M&A Bank": "https://mabank.jp/feed/",
+    "ストライク M&A": "https://www.strike.co.jp/feed/",
+    # スタートアップ・VC
     "BRIDGE (スタートアップ)": "https://thebridge.jp/feed",
     "PR TIMES": "https://prtimes.jp/index.rdf",
+    "INITIAL (スタートアップDB)": "https://initial.inc/articles/rss",
+    "Crunchbase News": "https://news.crunchbase.com/feed/",
+    # 経営・ビジネス戦略
     "DIAMOND online": "https://diamond.jp/list/feed/rss",
     "東洋経済": "https://toyokeizai.net/list/feed/rss",
     "NHK ビジネス": "https://www.nhk.or.jp/rss/news/cat3.xml",
+    "Harvard Business Review JP": "https://dhbr.diamond.jp/list/feed/rss",
+    "Forbes Japan": "https://forbesjapan.com/feed",
+    # グローバルM&A
+    "Mergermarket": "https://www.mergermarket.com/rss",
+    "Bloomberg M&A": "https://feeds.bloomberg.com/markets/news.rss",
+    "Reuters Business": "https://feeds.reuters.com/reuters/businessNews",
 }
 
 # カテゴリ定義（UIとanalyzerで共用）
@@ -111,10 +136,14 @@ CATEGORIES = {
         "NVIDIA", "Meta AI", "DeepMind", "Hugging Face", "Papers With Code",
     ],
     "👴 シニア・介護": [
-        "介護", "高齢者", "Senior", "Next Avenue", "McKnight",
+        "介護", "高齢者", "ケアマネ", "みんなの介護", "シルバー", "日経ヘルス",
+        "Senior", "McKnight", "Next Avenue", "Aging Care",
+        "Home Health", "Skilled Nursing", "MobiHealth", "Healthcare IT",
     ],
     "💼 M&A・経営戦略": [
-        "M&A", "MARR", "BRIDGE", "PR TIMES", "DIAMOND", "東洋経済", "NHK ビジネス",
+        "M&A", "MARR", "Bank", "ストライク", "BRIDGE", "PR TIMES", "INITIAL",
+        "Crunchbase", "DIAMOND", "東洋経済", "NHK ビジネス", "Harvard",
+        "Forbes", "Mergermarket", "Bloomberg", "Reuters",
     ],
 }
 
