@@ -74,13 +74,16 @@ def analyze(query: str, use_rag: bool = True) -> dict:
         user_message = query
 
     # Gemini API呼び出し
-    genai.configure(api_key=config.GOOGLE_API_KEY)
-    model = genai.GenerativeModel(
-        model_name=config.GEMINI_MODEL,
-        system_instruction=SYSTEM_PROMPT,
-    )
-    response = model.generate_content(user_message)
-    answer = response.text
+    try:
+        genai.configure(api_key=config.GOOGLE_API_KEY)
+        model = genai.GenerativeModel(
+            model_name=config.GEMINI_MODEL,
+            system_instruction=SYSTEM_PROMPT,
+        )
+        response = model.generate_content(user_message)
+        answer = response.text
+    except Exception as e:
+        answer = f"⚠️ Gemini APIエラー: {type(e).__name__}\n\n再度お試しください。"
 
     return {
         "answer": answer,
