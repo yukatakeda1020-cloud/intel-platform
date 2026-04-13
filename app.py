@@ -25,18 +25,10 @@ st.markdown("""
         color: #666;
         margin-bottom: 2rem;
     }
-    .metric-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
-    }
-    .source-tag {
-        background: #e3f2fd;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        color: #1565c0;
+    .article-card {
+        border-left: 3px solid #1a73e8;
+        padding-left: 12px;
+        margin-bottom: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -63,7 +55,6 @@ with st.sidebar:
         if total_errors > 0:
             st.warning(f"⚠️ エラー: {total_errors}件")
 
-        # 詳細を折りたたみ表示
         with st.expander("詳細を見る"):
             for r in results:
                 if r["new"] > 0:
@@ -100,11 +91,9 @@ tab_chat, tab_news = st.tabs(["💬 チャット分析", "📰 最新ニュー�
 
 # ----- チャットタブ -----
 with tab_chat:
-    # チャット履歴の初期化
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # 履歴を表示
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -119,14 +108,11 @@ with tab_chat:
                         else:
                             st.write(f"• {source_name} ({pub})")
 
-    # チャット入力
     if prompt := st.chat_input("蓄積情報について質問してください..."):
-        # ユーザーメッセージを表示・保存
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # AIの回答
         with st.chat_message("assistant"):
             with st.spinner("分析中..."):
                 result = analyzer.analyze(prompt)
@@ -154,26 +140,81 @@ with tab_chat:
 # ----- ニュースタブ -----
 with tab_news:
     try:
-        recent = database.get_recent_articles(30)
-        if recent:
-            for article in recent:
+        source_stats = database.get_source_stats()
+
+        # カテゴリ分類
+        categories = {
+            "🌍 すべて": None,
+            "⚡ エネルギー": ["OILPRICE", "Renewable", "CleanTechnica", "Greentech", "Energy Voice",
+                          "PV Magazine", "Electrek", "Carbon Brief", "環境ビジネス", "スマート", "自然エネルギー"],
+            "🤖 AI": ["TechCrunch", "Hacker", "MIT Tech", "VentureBeat", "Verge AI", "Ars Technica",
+                     "AI News", "Google AI", "OpenAI", "Anthropic", "ITmedia AI", "Ledge", "AINOW"],
+            "👴 シニア": ["介護", "高齢者", "ケアマネ", "シルバー", "みんなの介護",
+                       "McKnight", "Aging", "Senior Housing", "Next Avenue", "日経ヘルス"],
+            "📺 総合": ["NHK", "Yahoo!", "BBC", "Reuters"],
+        }
+
+        # カテゴリ選択
+        col_filter1, col_filter2 = st.columns([2, 3])
+        with col_filter1:
+            selected_category = st.selectbox("カテゴリ", list(categories.keys()))
+        with col_filter2:
+            keyword_filter = st.text_input("🔍 キーワード検索", placeholder="例: 再生可能エネルギー")
+
+        # カテゴリに該当するソースを特定
+        cat_keywords = categories[selected_category]
+
+        def match_category(source_name, keywords):
+            if keywords is None:
+                return True
+            return any(k.lower() in source_name.lower() for k in keywords)
+
+        # 記事取得
+        if keyword_filter:
+            articles = database.search_articles(keyword_filter, top_k=50)
+            display_articles = []
+            for a in articles:
+                display_articles.append({
+                    "title": a["text"].split("\n")[0],
+                    "summary": a["text"].split("\n")[1] if "\n" in a["text"] else "",
+                    "url": a.get("url", ""),
+                    "source": a.get("source", ""),
+                    "published_at": a.get("published_at", ""),
+                })
+        else:
+            all_articles = database.get_recent_articles(200)
+            display_articles = [a for a in all_articles if match_category(a.get("source", ""), cat_keywords)]
+
+        # 件数表示
+        st.caption(f"表示: {len(display_articles)}件")
+
+        # 記事一覧
+        if display_articles:
+            for article in display_articles[:50]:
                 col1, col2 = st.columns([5, 1])
                 with col1:
-                    title = article["title"]
+                    title = article.get("title", "")
+                    # タイトルから [ソース名] プレフィックスを除去
+                    if title.startswith("["):
+                        bracket_end = title.find("]")
+                        if bracket_end > 0:
+                            title = title[bracket_end + 1:].strip()
                     url = article.get("url", "")
                     if url:
                         st.markdown(f"**[{title}]({url})**")
                     else:
                         st.markdown(f"**{title}**")
-                    if article.get("summary"):
-                        st.caption(article["summary"][:150] + "..." if len(article.get("summary", "")) > 150 else article.get("summary", ""))
+                    summary = article.get("summary", "")
+                    if summary:
+                        st.caption(summary[:150] + "..." if len(summary) > 150 else summary)
                 with col2:
-                    st.caption(article.get("source", ""))
+                    src = article.get("source", "")
+                    st.caption(f"📰 {src}")
                     pub = article.get("published_at", "")
                     if pub:
                         st.caption(pub[:10])
                 st.divider()
         else:
-            st.info("まだ記事がありません。サイドバーの「ニュースを収集」ボタンで記事を取得してください。")
-    except Exception:
+            st.info("該当する記事がありません。")
+    except Exception as e:
         st.info("まだ記事がありません。サイドバーの「ニュースを収集」ボタンで記事を取得してください。")
