@@ -1,8 +1,6 @@
 import sqlite3
 import hashlib
 from datetime import datetime
-import chromadb
-from chromadb.config import Settings
 import config
 
 
@@ -13,7 +11,7 @@ def get_sqlite_conn():
 
 
 def init_db():
-    """SQLiteテーブルを初期化"""
+    """SQLiteテーブルとFTS5全文検索を初期化"""
     conn = get_sqlite_conn()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS articles (
@@ -27,18 +25,13 @@ def init_db():
             language TEXT DEFAULT 'unknown'
         )
     """)
+    # FTS5全文検索テーブル
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts
+        USING fts5(id, title, summary, source, content='articles', content_rowid='rowid')
+    """)
     conn.commit()
     conn.close()
-
-
-def get_chroma_collection():
-    """ChromaDBコレクションを取得"""
-    client = chromadb.PersistentClient(path=config.CHROMA_DIR)
-    collection = client.get_or_create_collection(
-        name="articles",
-        metadata={"hnsw:space": "cosine"},
-    )
-    return collection
 
 
 def make_article_id(url: str, title: str) -> str:
@@ -57,55 +50,67 @@ def article_exists(article_id: str) -> bool:
 
 def save_article(article_id: str, title: str, summary: str, url: str,
                  source: str, published_at: str, language: str = "unknown"):
-    """記事をSQLite + ChromaDBに保存"""
+    """記事をSQLiteに保存"""
     now = datetime.now().isoformat()
 
-    # SQLiteに保存
     conn = get_sqlite_conn()
     conn.execute(
         "INSERT OR IGNORE INTO articles (id, title, summary, url, source, published_at, collected_at, language) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (article_id, title, summary, url, source, published_at, now, language),
     )
+    # FTS5にも同期
+    conn.execute(
+        "INSERT OR IGNORE INTO articles_fts (id, title, summary, source) "
+        "VALUES (?, ?, ?, ?)",
+        (article_id, title, summary or "", source),
+    )
     conn.commit()
     conn.close()
 
-    # ChromaDBに保存（タイトル+要約をドキュメントとして）
-    doc_text = f"[{source}] {title}"
-    if summary:
-        doc_text += f"\n{summary}"
-
-    collection = get_chroma_collection()
-    collection.upsert(
-        ids=[article_id],
-        documents=[doc_text],
-        metadatas=[{
-            "source": source,
-            "url": url or "",
-            "published_at": published_at or "",
-            "language": language,
-        }],
-    )
-
 
 def search_articles(query: str, top_k: int = None):
-    """ベクトル類似検索で関連記事を取得"""
+    """全文検索で関連記事を取得"""
     if top_k is None:
         top_k = config.RAG_TOP_K
-    collection = get_chroma_collection()
-    if collection.count() == 0:
-        return []
-    results = collection.query(query_texts=[query], n_results=min(top_k, collection.count()))
+    conn = get_sqlite_conn()
+
+    # FTS5検索を試行、失敗時はLIKE検索にフォールバック
+    try:
+        # クエリをFTS5用に変換（各単語をOR検索）
+        words = query.strip().split()
+        fts_query = " OR ".join(words) if words else query
+        rows = conn.execute("""
+            SELECT a.*, rank
+            FROM articles_fts fts
+            JOIN articles a ON a.id = fts.id
+            WHERE articles_fts MATCH ?
+            ORDER BY rank
+            LIMIT ?
+        """, (fts_query, top_k)).fetchall()
+    except Exception:
+        # LIKE検索にフォールバック
+        like_pattern = f"%{query}%"
+        rows = conn.execute("""
+            SELECT * FROM articles
+            WHERE title LIKE ? OR summary LIKE ?
+            ORDER BY collected_at DESC
+            LIMIT ?
+        """, (like_pattern, like_pattern, top_k)).fetchall()
+
+    conn.close()
+
     articles = []
-    for i, doc in enumerate(results["documents"][0]):
-        meta = results["metadatas"][0][i]
-        dist = results["distances"][0][i] if results.get("distances") else None
+    for r in rows:
+        row = dict(r)
+        doc_text = f"[{row.get('source', '')}] {row.get('title', '')}"
+        if row.get("summary"):
+            doc_text += f"\n{row['summary']}"
         articles.append({
-            "text": doc,
-            "source": meta.get("source", ""),
-            "url": meta.get("url", ""),
-            "published_at": meta.get("published_at", ""),
-            "distance": dist,
+            "text": doc_text,
+            "source": row.get("source", ""),
+            "url": row.get("url", ""),
+            "published_at": row.get("published_at", ""),
         })
     return articles
 

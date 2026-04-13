@@ -16,7 +16,6 @@ CLAUDE_MODEL = "claude-sonnet-4-20250514"
 # データベース設定
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 SQLITE_DB_PATH = os.path.join(DATA_DIR, "articles.db")
-CHROMA_DIR = os.path.join(DATA_DIR, "chroma")
 
 # RSSフィード一覧
 RSS_FEEDS = {
