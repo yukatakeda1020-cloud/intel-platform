@@ -46,15 +46,32 @@ RSS_FEEDS = {
     "CDP / Climate": "https://www.cdp.net/en/articles/rss",
 
     # ─────────────────────────────────────────────
-    # 3. AI・テクノロジー
+    # 3. AI・テクノロジー（世界のAI情報）
     # ─────────────────────────────────────────────
+    # 日本
     "ITmedia AI+": "https://rss.itmedia.co.jp/rss/2.0/aiplus.xml",
-    "MIT Tech Review": "https://www.technologyreview.com/feed/",
-    "VentureBeat AI": "https://venturebeat.com/category/ai/feed/",
-    "AI News": "https://www.artificialintelligence-news.com/feed/",
-    "Google AI Blog": "https://blog.google/technology/ai/rss/",
     "AINOW": "https://ainow.ai/feed/",
+    "Ledge.ai": "https://ledge.ai/feed/",
+    # 米国・グローバル
     "TechCrunch": "https://techcrunch.com/feed/",
+    "VentureBeat AI": "https://venturebeat.com/category/ai/feed/",
+    "MIT Tech Review": "https://www.technologyreview.com/feed/",
+    "The Verge AI": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+    "Ars Technica": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+    "Wired AI": "https://www.wired.com/feed/tag/ai/latest/rss",
+    "AI News": "https://www.artificialintelligence-news.com/feed/",
+    "Hacker News": "https://hnrss.org/frontpage",
+    # AI企業公式
+    "Google AI Blog": "https://blog.google/technology/ai/rss/",
+    "OpenAI Blog": "https://openai.com/blog/rss.xml",
+    "Anthropic News": "https://www.anthropic.com/rss.xml",
+    "Microsoft AI Blog": "https://blogs.microsoft.com/ai/feed/",
+    "NVIDIA Blog": "https://blogs.nvidia.com/feed/",
+    "Meta AI Blog": "https://ai.meta.com/blog/rss/",
+    # AI研究・論文
+    "DeepMind Blog": "https://deepmind.google/blog/rss.xml",
+    "Hugging Face Blog": "https://huggingface.co/blog/feed.xml",
+    "Papers With Code": "https://paperswithcode.com/latest/rss",
 
     # ─────────────────────────────────────────────
     # 4. シニア・介護・ヘルスケア
@@ -88,8 +105,10 @@ CATEGORIES = {
         "GreenBiz", "ESG", "Sustainable", "環境省", "CDP",
     ],
     "🤖 AI・テクノロジー": [
-        "ITmedia AI", "MIT Tech", "VentureBeat", "AI News",
-        "Google AI", "AINOW", "TechCrunch",
+        "ITmedia AI", "AINOW", "Ledge", "TechCrunch", "VentureBeat",
+        "MIT Tech", "Verge AI", "Ars Technica", "Wired", "AI News",
+        "Hacker News", "Google AI", "OpenAI", "Anthropic", "Microsoft AI",
+        "NVIDIA", "Meta AI", "DeepMind", "Hugging Face", "Papers With Code",
     ],
     "👴 シニア・介護": [
         "介護", "高齢者", "Senior", "Next Avenue", "McKnight",
