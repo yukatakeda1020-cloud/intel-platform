@@ -1,10 +1,12 @@
 import sqlite3
 import hashlib
+import os
 from datetime import datetime
 import config
 
 
 def get_sqlite_conn():
+    os.makedirs(config.DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(config.SQLITE_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
