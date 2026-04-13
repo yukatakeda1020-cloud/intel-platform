@@ -114,17 +114,8 @@ with tab_collect:
 # ----- ニュースタブ -----
 with tab_news:
     try:
-        # カテゴリ分類（Team Energy向け）
-        categories = {
-            "🌍 すべて": None,
-            "⚡ エネルギー・脱炭素": ["スマート", "環境", "自然エネ", "PV", "Clean", "Carbon",
-                               "Electrek", "Renewable", "OIL", "Energy Voice", "GreenBiz", "ESG"],
-            "🚀 スタートアップ・経営": ["TechCrunch", "BRIDGE", "PR TIMES", "DIAMOND", "東洋経済"],
-            "🤖 AI・テクノロジー": ["MIT Tech", "VentureBeat", "AI News", "ITmedia AI",
-                              "Google AI", "AINOW"],
-            "🏘️ 地方創生": ["地方創生", "NHK"],
-            "👴 シニア・介護": ["介護", "高齢者", "Senior", "Next Avenue"],
-        }
+        # カテゴリ分類（configから読み込み）
+        categories = analyzer.config.CATEGORIES
 
         # フィルターUI（スマホでも見やすい1列）
         selected_category = st.selectbox("カテゴリで絞り込み", list(categories.keys()))
