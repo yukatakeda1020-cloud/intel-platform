@@ -95,7 +95,7 @@ def collect_all_feeds(progress_callback=None) -> list:
 
         result = collect_from_feed(name, url)
         results.append(result)
-        time.sleep(0.5)  # サーバーへの負荷軽減
+        time.sleep(0.2)  # サーバーへの負荷軽減
 
     if progress_callback:
         progress_callback(1.0, "収集完了")
