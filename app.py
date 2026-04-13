@@ -4,6 +4,9 @@ import collector
 import analyzer
 from datetime import datetime
 
+# 新テーブルが確実に作成されるよう再初期化
+database.init_db()
+
 st.set_page_config(
     page_title="Intel Platform | Team Energy",
     page_icon="⚡",
