@@ -1,7 +1,7 @@
 import sqlite3
 import hashlib
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import config
 
 
@@ -32,18 +32,43 @@ def init_db():
         CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts
         USING fts5(id, title, summary, source, content='articles', content_rowid='rowid')
     """)
+    # お気に入りテーブル
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS favorites (
+            article_id TEXT PRIMARY KEY,
+            added_at TEXT NOT NULL,
+            FOREIGN KEY (article_id) REFERENCES articles(id)
+        )
+    """)
+    # 手動メモテーブル
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS memos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            category TEXT DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+    """)
+    # 自動収集ログ
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS auto_collect_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            collected_at TEXT NOT NULL,
+            new_count INTEGER DEFAULT 0,
+            error_count INTEGER DEFAULT 0
+        )
+    """)
     conn.commit()
     conn.close()
 
 
 def make_article_id(url: str, title: str) -> str:
-    """記事の一意IDを生成"""
     raw = f"{url}:{title}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def article_exists(article_id: str) -> bool:
-    """記事が既に保存済みか確認"""
     conn = get_sqlite_conn()
     row = conn.execute("SELECT 1 FROM articles WHERE id = ?", (article_id,)).fetchone()
     conn.close()
@@ -52,16 +77,13 @@ def article_exists(article_id: str) -> bool:
 
 def save_article(article_id: str, title: str, summary: str, url: str,
                  source: str, published_at: str, language: str = "unknown"):
-    """記事をSQLiteに保存"""
     now = datetime.now().isoformat()
-
     conn = get_sqlite_conn()
     conn.execute(
         "INSERT OR IGNORE INTO articles (id, title, summary, url, source, published_at, collected_at, language) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (article_id, title, summary, url, source, published_at, now, language),
     )
-    # FTS5にも同期
     conn.execute(
         "INSERT OR IGNORE INTO articles_fts (id, title, summary, source) "
         "VALUES (?, ?, ?, ?)",
@@ -72,14 +94,10 @@ def save_article(article_id: str, title: str, summary: str, url: str,
 
 
 def search_articles(query: str, top_k: int = None):
-    """全文検索で関連記事を取得"""
     if top_k is None:
         top_k = config.RAG_TOP_K
     conn = get_sqlite_conn()
-
-    # FTS5検索を試行、失敗時はLIKE検索にフォールバック
     try:
-        # クエリをFTS5用に変換（各単語をOR検索）
         words = query.strip().split()
         fts_query = " OR ".join(words) if words else query
         rows = conn.execute("""
@@ -91,7 +109,6 @@ def search_articles(query: str, top_k: int = None):
             LIMIT ?
         """, (fts_query, top_k)).fetchall()
     except Exception:
-        # LIKE検索にフォールバック
         like_pattern = f"%{query}%"
         rows = conn.execute("""
             SELECT * FROM articles
@@ -99,7 +116,6 @@ def search_articles(query: str, top_k: int = None):
             ORDER BY collected_at DESC
             LIMIT ?
         """, (like_pattern, like_pattern, top_k)).fetchall()
-
     conn.close()
 
     articles = []
@@ -118,7 +134,6 @@ def search_articles(query: str, top_k: int = None):
 
 
 def get_article_count() -> int:
-    """蓄積記事数を取得"""
     conn = get_sqlite_conn()
     row = conn.execute("SELECT COUNT(*) FROM articles").fetchone()
     conn.close()
@@ -126,7 +141,6 @@ def get_article_count() -> int:
 
 
 def get_recent_articles(limit: int = 20):
-    """最新の記事一覧を取得"""
     conn = get_sqlite_conn()
     rows = conn.execute(
         "SELECT * FROM articles ORDER BY collected_at DESC LIMIT ?", (limit,)
@@ -136,13 +150,154 @@ def get_recent_articles(limit: int = 20):
 
 
 def get_source_stats():
-    """ソースごとの記事数を取得"""
     conn = get_sqlite_conn()
     rows = conn.execute(
         "SELECT source, COUNT(*) as count FROM articles GROUP BY source ORDER BY count DESC"
     ).fetchall()
     conn.close()
     return {r["source"]: r["count"] for r in rows}
+
+
+# ===== お気に入り機能 =====
+def toggle_favorite(article_id: str) -> bool:
+    """お気に入りの追加/解除。追加ならTrue、解除ならFalseを返す"""
+    conn = get_sqlite_conn()
+    exists = conn.execute("SELECT 1 FROM favorites WHERE article_id = ?", (article_id,)).fetchone()
+    if exists:
+        conn.execute("DELETE FROM favorites WHERE article_id = ?", (article_id,))
+        conn.commit()
+        conn.close()
+        return False
+    else:
+        conn.execute("INSERT INTO favorites (article_id, added_at) VALUES (?, ?)",
+                     (article_id, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        return True
+
+
+def is_favorite(article_id: str) -> bool:
+    conn = get_sqlite_conn()
+    row = conn.execute("SELECT 1 FROM favorites WHERE article_id = ?", (article_id,)).fetchone()
+    conn.close()
+    return row is not None
+
+
+def get_favorite_ids() -> set:
+    conn = get_sqlite_conn()
+    rows = conn.execute("SELECT article_id FROM favorites").fetchall()
+    conn.close()
+    return {r["article_id"] for r in rows}
+
+
+def get_favorite_articles():
+    conn = get_sqlite_conn()
+    rows = conn.execute("""
+        SELECT a.* FROM articles a
+        JOIN favorites f ON a.id = f.article_id
+        ORDER BY f.added_at DESC
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ===== メモ機能 =====
+def save_memo(title: str, content: str, category: str = ""):
+    conn = get_sqlite_conn()
+    conn.execute(
+        "INSERT INTO memos (title, content, category, created_at) VALUES (?, ?, ?, ?)",
+        (title, content, category, datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_memos(limit: int = 50):
+    conn = get_sqlite_conn()
+    rows = conn.execute("SELECT * FROM memos ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_memo(memo_id: int):
+    conn = get_sqlite_conn()
+    conn.execute("DELETE FROM memos WHERE id = ?", (memo_id,))
+    conn.commit()
+    conn.close()
+
+
+# ===== トレンド分析 =====
+def get_daily_counts(days: int = 14):
+    """過去N日間の日別・ソース別記事数"""
+    conn = get_sqlite_conn()
+    since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    rows = conn.execute("""
+        SELECT DATE(collected_at) as date, source, COUNT(*) as count
+        FROM articles
+        WHERE DATE(collected_at) >= ?
+        GROUP BY DATE(collected_at), source
+        ORDER BY date
+    """, (since,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_daily_total(days: int = 14):
+    """過去N日間の日別合計記事数"""
+    conn = get_sqlite_conn()
+    since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    rows = conn.execute("""
+        SELECT DATE(collected_at) as date, COUNT(*) as count
+        FROM articles
+        WHERE DATE(collected_at) >= ?
+        GROUP BY DATE(collected_at)
+        ORDER BY date
+    """, (since,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_category_counts():
+    """カテゴリ別の記事数"""
+    stats = get_source_stats()
+    categories = config.CATEGORIES
+    result = {}
+    for cat_name, keywords in categories.items():
+        if keywords is None:
+            continue
+        count = sum(v for k, v in stats.items()
+                    if any(kw.lower() in k.lower() for kw in keywords))
+        result[cat_name] = count
+    return result
+
+
+# ===== 自動収集ログ =====
+def log_auto_collect(new_count: int, error_count: int):
+    conn = get_sqlite_conn()
+    conn.execute(
+        "INSERT INTO auto_collect_log (collected_at, new_count, error_count) VALUES (?, ?, ?)",
+        (datetime.now().isoformat(), new_count, error_count),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_last_auto_collect():
+    conn = get_sqlite_conn()
+    row = conn.execute(
+        "SELECT * FROM auto_collect_log ORDER BY collected_at DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def should_auto_collect(interval_hours: int = 12) -> bool:
+    """前回の自動収集からN時間以上経過しているか"""
+    last = get_last_auto_collect()
+    if not last:
+        return True
+    last_time = datetime.fromisoformat(last["collected_at"])
+    return datetime.now() - last_time > timedelta(hours=interval_hours)
 
 
 # 起動時にDBを初期化

@@ -4,7 +4,6 @@ import config
 
 
 def build_context(articles: list) -> str:
-    """検索結果の記事をコンテキスト文字列にまとめる"""
     if not articles:
         return "（関連する蓄積情報はありません）"
 
@@ -47,6 +46,14 @@ SYSTEM_PROMPT = (
 )
 
 
+def _get_model():
+    genai.configure(api_key=config.GOOGLE_API_KEY)
+    return genai.GenerativeModel(
+        model_name=config.GEMINI_MODEL,
+        system_instruction=SYSTEM_PROMPT,
+    )
+
+
 def analyze(query: str, use_rag: bool = True) -> dict:
     """蓄積情報を活用してGeminiで分析・回答"""
     if not config.GOOGLE_API_KEY:
@@ -57,14 +64,12 @@ def analyze(query: str, use_rag: bool = True) -> dict:
             "sources": [],
         }
 
-    # RAG: 関連記事を検索
     sources = []
     context = ""
     if use_rag:
         sources = database.search_articles(query)
         context = build_context(sources)
 
-    # プロンプト構築
     if context:
         user_message = (
             f"以下は蓄積された関連情報です:\n\n{context}\n\n"
@@ -73,13 +78,8 @@ def analyze(query: str, use_rag: bool = True) -> dict:
     else:
         user_message = query
 
-    # Gemini API呼び出し
     try:
-        genai.configure(api_key=config.GOOGLE_API_KEY)
-        model = genai.GenerativeModel(
-            model_name=config.GEMINI_MODEL,
-            system_instruction=SYSTEM_PROMPT,
-        )
+        model = _get_model()
         response = model.generate_content(user_message)
         answer = response.text
     except Exception as e:
@@ -89,3 +89,23 @@ def analyze(query: str, use_rag: bool = True) -> dict:
         "answer": answer,
         "sources": sources,
     }
+
+
+def summarize_in_japanese(title: str, summary: str, source: str = "") -> str:
+    """英語記事を日本語で要約"""
+    if not config.GOOGLE_API_KEY:
+        return ""
+    try:
+        model = _get_model()
+        prompt = (
+            f"以下の英語ニュース記事を日本語で3行以内に要約してください。\n"
+            f"Team Energyの事業（地熱発電・カーボンクレジット・AI・シニア・M&A）に"
+            f"関連する示唆があれば一言添えてください。\n\n"
+            f"タイトル: {title}\n"
+            f"内容: {summary}\n"
+            f"ソース: {source}"
+        )
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception:
+        return ""
