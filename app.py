@@ -3,139 +3,92 @@ import database
 import collector
 import analyzer
 
-# ページ設定
 st.set_page_config(
     page_title="Intel Platform | Team Energy",
     page_icon="⚡",
-    layout="centered",  # centeredでスマホ対応
-    initial_sidebar_state="collapsed",  # スマホではサイドバー閉じる
+    layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
-# スマホ対応CSS
+# スマホ最適化CSS
 st.markdown("""
 <style>
-    /* スマホ対応 */
-    .block-container {
-        padding: 1rem 1rem !important;
-        max-width: 100% !important;
-    }
-    /* ヘッダー */
-    .main-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #1a1a2e;
-    }
-    .sub-title {
-        font-size: 0.85rem;
-        color: #666;
-        margin-bottom: 1rem;
-    }
+    .block-container { padding: 0.5rem 0.8rem !important; }
+    [data-testid="stSidebar"] { display: none; }
+    h1, h2, h3 { margin-top: 0.5rem !important; }
+
     /* 記事カード */
-    .article-source {
+    .news-card {
+        border-left: 3px solid #1a73e8;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        background: #fafafa;
+        border-radius: 0 6px 6px 0;
+    }
+    .news-card a {
+        color: #1a1a2e;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        display: block;
+    }
+    .news-card a:hover { color: #1a73e8; }
+    .news-meta {
         font-size: 0.7rem;
-        color: #1565c0;
+        color: #888;
+        margin-top: 4px;
+    }
+    .news-tag {
         background: #e3f2fd;
+        color: #1565c0;
         padding: 1px 6px;
         border-radius: 3px;
-        display: inline-block;
+        font-size: 0.65rem;
+        margin-right: 4px;
     }
-    .article-date {
-        font-size: 0.7rem;
-        color: #999;
-    }
-    /* サイドバーの幅 */
-    [data-testid="stSidebar"] {
-        min-width: 250px;
-        max-width: 300px;
-    }
-    /* ボタンサイズ */
-    .stButton > button {
-        font-size: 0.9rem;
+    .news-summary {
+        font-size: 0.8rem;
+        color: #555;
+        margin-top: 4px;
+        line-height: 1.3;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ----- ヘッダー -----
-st.markdown('<div class="main-title">⚡ Intel Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Team Energy | 情報蓄積・分析</div>', unsafe_allow_html=True)
+# ヘッダー
+st.markdown("## ⚡ Intel Platform")
+st.caption("Team Energy | 情報蓄積・分析")
 
-# ----- タブ -----
+# タブ
 tab_news, tab_chat, tab_collect = st.tabs(["📰 ニュース", "💬 分析", "📡 収集"])
 
-# ----- 収集タブ -----
-with tab_collect:
-    st.markdown("### 📡 ニュース収集")
-
-    if st.button("🔄 最新ニュースを収集", use_container_width=True, type="primary"):
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-
-        def update_progress(pct, msg):
-            progress_bar.progress(pct)
-            status_text.text(msg)
-
-        results = collector.collect_all_feeds(progress_callback=update_progress)
-
-        total_new = sum(r["new"] for r in results)
-        total_skipped = sum(r["skipped"] for r in results)
-        total_errors = sum(r["errors"] for r in results)
-
-        st.success(f"✅ 新規 {total_new}件 / スキップ {total_skipped}件")
-        if total_errors > 0:
-            st.warning(f"⚠️ エラー: {total_errors}件")
-
-        with st.expander("詳細"):
-            for r in results:
-                if r["new"] > 0:
-                    st.write(f"📰 {r['name']}: +{r['new']}件")
-
-    st.divider()
-
-    # 蓄積状況
-    st.markdown("### 📊 蓄積状況")
-    try:
-        article_count = database.get_article_count()
-        st.metric("蓄積記事数", f"{article_count:,}件")
-
-        source_stats = database.get_source_stats()
-        if source_stats:
-            with st.expander("ソース別の内訳"):
-                for source, count in source_stats.items():
-                    st.write(f"• {source}: {count}件")
-    except Exception:
-        st.info("まだ記事がありません。上のボタンで収集してください。")
-
-    st.divider()
-    st.markdown("### ⚙️ 設定")
-    api_key_set = bool(analyzer.config.ANTHROPIC_API_KEY)
-    st.write(f"モデル: `{analyzer.config.CLAUDE_MODEL}`")
-    st.write(f"API Key: {'✅ 設定済み' if api_key_set else '❌ 未設定'}")
-
-# ----- ニュースタブ -----
+# ===== ニュースタブ =====
 with tab_news:
     try:
-        # カテゴリ分類（configから読み込み）
         categories = analyzer.config.CATEGORIES
-
-        # フィルターUI（スマホでも見やすい1列）
-        selected_category = st.selectbox("カテゴリで絞り込み", list(categories.keys()))
-        keyword_filter = st.text_input("🔍 キーワード検索", placeholder="例: 地熱発電, AI活用")
+        selected_category = st.selectbox("カテゴリ", list(categories.keys()), label_visibility="collapsed")
+        keyword_filter = st.text_input("🔍 キーワード", placeholder="例: 地熱発電, カーボンクレジット", label_visibility="collapsed")
 
         cat_keywords = categories[selected_category]
 
-        def match_category(source_name, keywords):
-            if keywords is None:
+        def match_cat(src, keys):
+            if keys is None:
                 return True
-            return any(k.lower() in source_name.lower() for k in keywords)
+            return any(k.lower() in src.lower() for k in keys)
 
-        # 記事取得
         if keyword_filter:
-            articles = database.search_articles(keyword_filter, top_k=50)
-            display_articles = []
-            for a in articles:
+            results = database.search_articles(keyword_filter, top_k=50)
+            display = []
+            for a in results:
                 lines = a["text"].split("\n")
-                display_articles.append({
-                    "title": lines[0] if lines else "",
+                title = lines[0] if lines else ""
+                if title.startswith("["):
+                    idx = title.find("]")
+                    if idx > 0:
+                        title = title[idx + 1:].strip()
+                display.append({
+                    "title": title,
                     "summary": lines[1] if len(lines) > 1 else "",
                     "url": a.get("url", ""),
                     "source": a.get("source", ""),
@@ -143,49 +96,45 @@ with tab_news:
                 })
         else:
             all_articles = database.get_recent_articles(200)
-            display_articles = [a for a in all_articles if match_category(a.get("source", ""), cat_keywords)]
+            display = [a for a in all_articles if match_cat(a.get("source", ""), cat_keywords)]
 
-        st.caption(f"{len(display_articles)}件")
+        st.caption(f"{len(display)}件")
 
-        # 記事一覧（スマホ対応：1カラム表示）
-        if display_articles:
-            for article in display_articles[:50]:
-                title = article.get("title", "")
-                if title.startswith("["):
-                    bracket_end = title.find("]")
-                    if bracket_end > 0:
-                        title = title[bracket_end + 1:].strip()
+        # 記事をHTMLカードで表示（タップしやすく）
+        for article in display[:50]:
+            title = article.get("title", "")
+            if title.startswith("["):
+                idx = title.find("]")
+                if idx > 0:
+                    title = title[idx + 1:].strip()
 
-                url = article.get("url", "")
-                src = article.get("source", "")
-                pub = article.get("published_at", "")[:10]
+            url = article.get("url", "")
+            src = article.get("source", "")
+            pub = article.get("published_at", "")[:10]
+            summary = article.get("summary", "")
+            if summary and len(summary) > 100:
+                summary = summary[:100] + "..."
 
-                # ソースタグ + 日付
-                meta = f'<span class="article-source">{src}</span> <span class="article-date">{pub}</span>'
-                st.markdown(meta, unsafe_allow_html=True)
+            # HTMLカードでリンクをタップ可能に
+            link_html = f'<a href="{url}" target="_blank">{title}</a>' if url else f'<span style="font-weight:bold">{title}</span>'
+            summary_html = f'<div class="news-summary">{summary}</div>' if summary else ""
 
-                # タイトル（リンク付き）
-                if url:
-                    st.markdown(f"**[{title}]({url})**")
-                else:
-                    st.markdown(f"**{title}**")
+            card = f'''<div class="news-card">
+                {link_html}
+                <div class="news-meta"><span class="news-tag">{src}</span> {pub}</div>
+                {summary_html}
+            </div>'''
+            st.markdown(card, unsafe_allow_html=True)
 
-                # 要約
-                summary = article.get("summary", "")
-                if summary:
-                    display_summary = summary[:120] + "..." if len(summary) > 120 else summary
-                    st.caption(display_summary)
+        if not display:
+            st.info("記事がありません。「📡 収集」タブでニュースを取得してください。")
 
-                st.markdown("---")
-        else:
-            st.info("該当する記事がありません。「📡 収集」タブでニュースを取得してください。")
     except Exception:
-        st.info("まだ記事がありません。「📡 収集」タブでニュースを取得してください。")
+        st.info("「📡 収集」タブでニュースを取得してください。")
 
-# ----- チャット分析タブ -----
+# ===== チャット分析タブ =====
 with tab_chat:
-    st.markdown("### 💬 蓄積情報を分析")
-    st.caption("収集したニュースをもとにAIが回答します")
+    st.caption("蓄積ニュースをもとにAIが分析・回答します")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -195,13 +144,13 @@ with tab_chat:
             st.markdown(msg["content"])
             if msg.get("sources"):
                 with st.expander(f"📎 参照 ({len(msg['sources'])}件)"):
-                    for src in msg["sources"]:
-                        url = src.get("url", "")
-                        name = src.get("source", "")
-                        if url:
-                            st.markdown(f"• [{name}]({url})")
+                    for s in msg["sources"]:
+                        u = s.get("url", "")
+                        n = s.get("source", "")
+                        if u:
+                            st.markdown(f"• [{n}]({u})")
                         else:
-                            st.write(f"• {name}")
+                            st.write(f"• {n}")
 
     if prompt := st.chat_input("質問してください..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -211,22 +160,62 @@ with tab_chat:
         with st.chat_message("assistant"):
             with st.spinner("分析中..."):
                 result = analyzer.analyze(prompt)
-
             st.markdown(result["answer"])
-
             sources = result.get("sources", [])
             if sources:
                 with st.expander(f"📎 参照 ({len(sources)}件)"):
-                    for src in sources:
-                        url = src.get("url", "")
-                        name = src.get("source", "")
-                        if url:
-                            st.markdown(f"• [{name}]({url})")
+                    for s in sources:
+                        u = s.get("url", "")
+                        n = s.get("source", "")
+                        if u:
+                            st.markdown(f"• [{n}]({u})")
                         else:
-                            st.write(f"• {name}")
+                            st.write(f"• {n}")
 
         st.session_state.messages.append({
             "role": "assistant",
             "content": result["answer"],
             "sources": sources,
         })
+
+# ===== 収集タブ =====
+with tab_collect:
+    if st.button("🔄 最新ニュースを収集", use_container_width=True, type="primary"):
+        progress = st.progress(0)
+        status = st.empty()
+
+        def cb(pct, msg):
+            progress.progress(pct)
+            status.text(msg)
+
+        results = collector.collect_all_feeds(progress_callback=cb)
+        total_new = sum(r["new"] for r in results)
+        total_err = sum(r["errors"] for r in results)
+
+        st.success(f"✅ 新規 {total_new}件を収集しました")
+        if total_err:
+            st.warning(f"⚠️ {total_err}件のフィードでエラー")
+
+        with st.expander("詳細"):
+            for r in results:
+                if r["new"] > 0:
+                    st.write(f"• {r['name']}: +{r['new']}件")
+
+        st.info("👆「📰 ニュース」タブに切り替えて記事を読めます")
+
+    st.divider()
+    st.markdown("### 📊 蓄積状況")
+    try:
+        count = database.get_article_count()
+        st.metric("蓄積記事数", f"{count:,}件")
+        stats = database.get_source_stats()
+        if stats:
+            with st.expander("ソース別の内訳"):
+                for src, cnt in stats.items():
+                    st.write(f"• {src}: {cnt}件")
+    except Exception:
+        st.info("まだ記事がありません")
+
+    st.divider()
+    api_ok = bool(analyzer.config.ANTHROPIC_API_KEY)
+    st.caption(f"API Key: {'✅ 設定済み' if api_ok else '❌ 未設定（分析タブに必要）'}")
