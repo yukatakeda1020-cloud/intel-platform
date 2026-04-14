@@ -20,30 +20,43 @@ st.markdown("""
     .block-container { padding: 0.5rem 0.8rem !important; }
     [data-testid="stSidebar"] { display: none; }
     h1, h2, h3 { margin-top: 0.5rem !important; }
+    /* カード全体をクリック可能なリンクに */
+    a.news-card-link {
+        display: block;
+        text-decoration: none !important;
+        color: inherit !important;
+        margin-bottom: 12px;
+    }
+    a.news-card-link:hover { text-decoration: none !important; }
+    a.news-card-link:hover .news-card {
+        background: #f0f7ff;
+        border-left-color: #0d47a1;
+    }
     .news-card {
         border-left: 3px solid #1a73e8;
-        padding: 8px 12px;
-        margin-bottom: 12px;
+        padding: 10px 14px;
         background: #fafafa;
         border-radius: 0 6px 6px 0;
+        transition: all 0.15s;
     }
-    .news-card a {
-        color: #1a1a2e; text-decoration: none;
-        font-weight: bold; font-size: 0.95rem;
-        line-height: 1.4; display: block;
+    .news-card-title {
+        color: #1a1a2e !important;
+        font-weight: bold;
+        font-size: 0.95rem;
+        line-height: 1.4;
     }
-    .news-card a:hover { color: #1a73e8; }
-    .news-meta { font-size: 0.7rem; color: #888; margin-top: 4px; }
+    a.news-card-link:hover .news-card-title { color: #1a73e8 !important; }
+    .news-meta { font-size: 0.7rem; color: #888; margin-top: 6px; }
     .news-tag {
         background: #e3f2fd; color: #1565c0;
         padding: 1px 6px; border-radius: 3px;
         font-size: 0.65rem; margin-right: 4px;
     }
     .news-summary { font-size: 0.8rem; color: #555; margin-top: 4px; line-height: 1.3; }
-    .fav-card { border-left: 3px solid #f5a623; }
+    .fav-card { border-left-color: #f5a623 !important; }
     .memo-card {
         border-left: 3px solid #4caf50;
-        padding: 8px 12px; margin-bottom: 10px;
+        padding: 10px 14px; margin-bottom: 10px;
         background: #f9fdf9; border-radius: 0 6px 6px 0;
     }
 </style>
@@ -138,14 +151,23 @@ with tab_news:
             if summary and len(summary) > 100:
                 summary = summary[:100] + "..."
 
-            link_html = f'<a href="{url}" target="_blank">{title}</a>' if url else f'<span style="font-weight:bold">{title}</span>'
-            summary_html = f'<div class="news-summary">{summary}</div>' if summary else ""
+            # HTMLエスケープ
+            import html as _html
+            safe_title = _html.escape(title)
+            safe_src = _html.escape(src)
+            safe_summary = _html.escape(summary)
 
-            card = f'''<div class="news-card">
-                {link_html}
-                <div class="news-meta"><span class="news-tag">{src}</span> {pub}</div>
+            summary_html = f'<div class="news-summary">{safe_summary}</div>' if summary else ""
+            inner = f'''<div class="news-card">
+                <div class="news-card-title">{safe_title}</div>
+                <div class="news-meta"><span class="news-tag">{safe_src}</span> {pub}</div>
                 {summary_html}
             </div>'''
+
+            if url:
+                card = f'<a href="{url}" target="_blank" rel="noopener" class="news-card-link">{inner}</a>'
+            else:
+                card = inner
             st.markdown(card, unsafe_allow_html=True)
 
             # お気に入り＆翻訳ボタン（同一行）
@@ -318,14 +340,21 @@ with tab_fav:
                 if summary and len(summary) > 100:
                     summary = summary[:100] + "..."
 
-                link_html = f'<a href="{url}" target="_blank">{title}</a>' if url else f'<span style="font-weight:bold">{title}</span>'
-                summary_html = f'<div class="news-summary">{summary}</div>' if summary else ""
+                import html as _html
+                safe_title = _html.escape(title)
+                safe_src = _html.escape(src)
+                safe_summary = _html.escape(summary)
+                summary_html = f'<div class="news-summary">{safe_summary}</div>' if summary else ""
 
-                card = f'''<div class="news-card fav-card">
-                    {link_html}
-                    <div class="news-meta"><span class="news-tag">{src}</span> {pub}</div>
+                inner = f'''<div class="news-card fav-card">
+                    <div class="news-card-title">{safe_title}</div>
+                    <div class="news-meta"><span class="news-tag">{safe_src}</span> {pub}</div>
                     {summary_html}
                 </div>'''
+                if url:
+                    card = f'<a href="{url}" target="_blank" rel="noopener" class="news-card-link">{inner}</a>'
+                else:
+                    card = inner
                 st.markdown(card, unsafe_allow_html=True)
 
                 if st.button("⭐ 解除", key=f"unfav_{article['id']}"):
