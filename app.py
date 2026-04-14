@@ -62,27 +62,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===== 初回アクセス時に自動収集 =====
-try:
-    if database.get_article_count() == 0 and "auto_collected" not in st.session_state:
-        st.session_state.auto_collected = True
-        with st.spinner("⚡ 初回ニュース収集中...（1〜2分かかります）"):
-            results = collector.collect_all_feeds()
-            total_new = sum(r["new"] for r in results)
-            total_err = sum(r["errors"] for r in results)
-            database.log_auto_collect(total_new, total_err)
-        if total_new > 0:
-            st.toast(f"⚡ 自動収集完了: {total_new}件", icon="📡")
-            st.rerun()
-    elif database.should_auto_collect(interval_hours=12):
-        results = collector.collect_all_feeds()
-        total_new = sum(r["new"] for r in results)
-        total_err = sum(r["errors"] for r in results)
-        database.log_auto_collect(total_new, total_err)
-        if total_new > 0:
-            st.toast(f"⚡ 自動収集: {total_new}件の新着", icon="📡")
-except Exception:
-    pass
+# 起動時の自動収集は無効化（123フィードは手動収集で実行）
+# ニュースタブで「📡 収集」タブから手動収集してください
 
 # ヘッダー
 st.markdown("## ⚡ Intel Platform")
