@@ -157,10 +157,8 @@ RSS_FEEDS = {
     "日本M&Aセンター": "https://www.nihon-ma.co.jp/columns/feed/",
     # スタートアップ・VC 日本
     "BRIDGE (スタートアップ)": "https://thebridge.jp/feed",
-    "PR TIMES": "https://prtimes.jp/index.rdf",
     "INITIAL (スタートアップDB)": "https://initial.inc/articles/rss",
     "TechCrunch Japan": "https://jp.techcrunch.com/feed/",
-    "CNET Japan": "https://japan.cnet.com/rss/index.rdf",
     # スタートアップ・VC グローバル
     "Crunchbase News": "https://news.crunchbase.com/feed/",
     "PitchBook News": "https://pitchbook.com/news/feed",
@@ -169,12 +167,8 @@ RSS_FEEDS = {
     "KrASIA (アジア)": "https://kr-asia.com/feed",
     "e27 (東南アジア)": "https://e27.co/feed/",
     # 経営・ビジネス戦略 日本
-    "DIAMOND online": "https://diamond.jp/list/feed/rss",
-    "東洋経済": "https://toyokeizai.net/list/feed/rss",
     "NHK ビジネス": "https://www.nhk.or.jp/rss/news/cat3.xml",
     "Harvard Business Review JP": "https://dhbr.diamond.jp/list/feed/rss",
-    "Forbes Japan": "https://forbesjapan.com/feed",
-    "NewsPicks": "https://newspicks.com/rss/news",
     "日経ビジネス": "https://business.nikkei.com/rss/sns/nb.rdf",
     # 経営・ビジネス グローバル
     "Financial Times": "https://www.ft.com/rss/home",
@@ -218,10 +212,9 @@ CATEGORIES = {
     ],
     "💼 M&A・経営戦略": [
         "M&A", "MARR", "Bank", "ストライク", "日本M&Aセンター",
-        "BRIDGE", "PR TIMES", "INITIAL", "TechCrunch Japan", "CNET",
+        "BRIDGE", "INITIAL", "TechCrunch Japan",
         "Crunchbase", "PitchBook", "Sifted", "TechInAsia", "KrASIA", "e27",
-        "DIAMOND", "東洋経済", "NHK ビジネス", "Harvard", "Forbes",
-        "NewsPicks", "日経ビジネス",
+        "NHK ビジネス", "Harvard", "日経ビジネス",
         "Financial Times", "Bloomberg", "Reuters", "Mergermarket",
     ],
 }
