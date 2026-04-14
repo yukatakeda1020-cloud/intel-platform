@@ -33,6 +33,13 @@ RSS_FEEDS = {
     # 地熱特化
     "ThinkGeoEnergy (地熱)": "https://www.thinkgeoenergy.com/feed/",
     "Geothermal Rising": "https://geothermal.org/feed",
+    # 次世代地熱・クローズドループ（Google News検索）
+    "次世代地熱 (JP)": "https://news.google.com/rss/search?q=%E6%AC%A1%E4%B8%96%E4%BB%A3%E5%9C%B0%E7%86%B1%E7%99%BA%E9%9B%BB+OR+%E3%82%AF%E3%83%AD%E3%83%BC%E3%82%BA%E3%83%89%E3%83%AB%E3%83%BC%E3%83%97%E5%9C%B0%E7%86%B1+OR+%E5%BC%B7%E5%8C%96%E5%9C%B0%E7%86%B1&hl=ja&gl=JP&ceid=JP:ja",
+    "Closed-Loop Geothermal": "https://news.google.com/rss/search?q=%22closed+loop+geothermal%22+OR+%22advanced+geothermal+systems%22&hl=en-US&gl=US&ceid=US:en",
+    "Enhanced Geothermal (EGS)": "https://news.google.com/rss/search?q=%22enhanced+geothermal+systems%22+OR+%22EGS+geothermal%22&hl=en-US&gl=US&ceid=US:en",
+    "Eavor (クローズドループ)": "https://news.google.com/rss/search?q=Eavor+geothermal&hl=en-US&gl=US&ceid=US:en",
+    "Fervo Energy": "https://news.google.com/rss/search?q=%22Fervo+Energy%22&hl=en-US&gl=US&ceid=US:en",
+    "ふるさと熱電": "https://news.google.com/rss/search?q=%E3%81%B5%E3%82%8B%E3%81%95%E3%81%A8%E7%86%B1%E9%9B%BB+OR+%E5%9C%B0%E7%86%B1%E7%99%BA%E9%9B%BB&hl=ja&gl=JP&ceid=JP:ja",
     # 再エネ・グローバル
     "PV Magazine": "https://www.pv-magazine.com/feed/",
     "PV Magazine Global": "https://www.pv-magazine.com/feed/",
@@ -184,6 +191,7 @@ CATEGORIES = {
     "🌋 再エネ・地熱・脱炭素": [
         "スマート", "環境ビジネス", "自然エネ", "経産省", "電気新聞",
         "ThinkGeo", "Geothermal",
+        "次世代地熱", "Closed-Loop", "Enhanced Geothermal", "Eavor", "Fervo", "ふるさと熱電",
         "PV Magazine", "Clean", "Electrek", "Renewable", "Energy Voice",
         "Carbon Brief", "OIL", "Utility Dive", "Energy Monitor",
         "Canary", "Recharge", "S&P Global", "Hydrogen", "Energy Storage",
